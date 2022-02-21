@@ -1,0 +1,250 @@
+---
+title: "Final Project Step 2"
+author: "Kaylar Fullington"
+date: 02/20/2022
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# The Reasearch Topic
+
+## Predicting Unemployment in a Pandemic
+In 2020 when the Covid-19 pandemic first hit the United States, unemployment sky-rocketed. If a future pandemic hits, it could be useful to predict what kind of characteristics place a given individual at risk of job-loss. If we knew the most vulnerable populations, we could enact policy ahead of time that would allow those people to continue to be gainfully employed. Data Science could allow us to predict what types of people would lose jobs and use limited financial resources to efficiently and effectively boost employment in a time of high volatility.
+
+### Research Questions
+1. What racial demographics are most vulnerable to job loss in a pandemic? Were there any employment gains among a given group?
+2. What gender demographics are most vulnerable to job loss in a pandemic? Were there any employment gains among a given group?
+3. What age demographics are most vulnerable to job loss in a pandemic? Were there any employment gains among a given group?
+4. What industries are most likely to have high unemployment in a pandemic? Did unemployment decrease for any industry?
+5. What was the average duration of unemployment for each given group during the pandemic?
+
+### Approach
+I will perform various transformations on the data sets below. This includes searching for potential correlation between any of the above variables and job loss potential, and assessing whether those correlations are significant. There are many factors to consider when attempting to predict unemployment, so it will be crucial to control for those factors. After assessing the correlations, I will create linear regression models to determine if I can predict the likelihood of unemployment based on any of the characteristics above. Additionally, I will make graphs to make the impacts of each variable easy to understand.
+
+
+### Potential Efficacy of Approach
+The approach described above will directly aid in the prediction of unemployment during a pandemic that is similar to Covid-19. Understanding the relationships between various variables and unemployment should help us accomplish this goal.
+
+
+## The Data
+
+### The Data Sets
+[2019 Anuual Averages - Household Data - Tables from Employment and Earnings](https://www.bls.gov/cps/cps_aa2019.htm)  
+[2020 Annual Averages - Household Data - Tables from Employment and Earnings](https://www.bls.gov/cps/cps_aa2020.htm)  
+[2021 Current Population Survey](https://www.bls.gov/cps/tables.htm#charunem)  
+
+**Original Source**  
+U.S. Bureau of Labor Statistics  
+This data was collected for the purpose of describing employment status and other chracteristics of the majority of the United States population.  
+I have elected to download all 57 tables for each year, which altogether describe racial demographics, employment status, industry of occupation, and gender demographics, among other things.  
+I have not been able to find any missing data sources in my overview, but I suspect that they have removed flawed data.
+
+
+### Required Packages
+
+* ggm
+* ggplot2
+* Hmisc
+* Polycor
+* Rcmdr
+* car
+* QuantPsyc
+* boot
+
+
+
+### Plots and Table Needs
+
+* Histograms
+* Scatter Plots
+* Linear Regression Plots
+
+## Future Steps
+
+I have not yet learned logistic regression and machine learning concepts, which could be useful in the final draft of my project.
+
+
+
+# Analyzing and Preparing the Data
+
+## Importing and Cleaning
+
+### Importing the Data
+```{r}
+# install.packages("readxl")
+# install.packages("plyr")
+# install.packages("dplyr")
+
+library(readxl)
+
+excel_sheets("C:/Users/runek/dsc520/data/cpsa2021.xlsx")
+
+df2021allcivilian <- read_excel("C:/Users/runek/dsc520/data/cpsa2021.xlsx")
+df2021age_sex_race <- read_excel("C:/Users/runek/dsc520/data/cpsa2021.xlsx", sheet = "cpsaat03")
+
+## I may need to pull in more data, specifically about Covid-19 case frequency in the United States over time
+
+```
+
+### Cleaning the Data
+```{r}
+library(tidyverse)
+df2021allcivilian <- na.omit(df2021allcivilian)
+
+# Removes all rows with NAs, this works fine because of the way the excel sheet was, with stacked columns
+
+
+colnames(df2021allcivilian)
+
+# Verifies current column names
+
+
+names(df2021allcivilian)[names(df2021allcivilian) == "HOUSEHOLD DATA\r\nANNUAL AVERAGES\r\n1. Employment status of the civilian noninstitutional population, 1951 to date"] <- "Year"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...2"] <- "Civ_Total_Pop"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...3"] <- "Emp_Total"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...4"] <- "Percent_of_Pop"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...5"] <- "Civ_Emp_Total"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...6"] <- "Civ_Emp_Percent"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...7"] <- "Emp_In_Agriculture"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...8"] <- "Emp_Not_Agriculture"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...9"] <- "Unemp_Total"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...10"] <- "Unemp_Percent"
+
+names(df2021allcivilian)[names(df2021allcivilian) == "...11"] <- "Not_in_Labor_Force"
+
+head(df2021allcivilian)
+
+# Could be more efficient, but gets the job done for renaming columns
+
+
+# Reading another sheet in the same workbook, attempting more efficient code
+
+df2021age_sex_race <- na.omit(df2021age_sex_race)
+
+library(dplyr)
+
+colnames(df2021age_sex_race)
+
+
+df2021age_sex_race <- df2021age_sex_race %>% rename(Age = 1)
+
+df2021age_sex_race <- df2021age_sex_race %>% rename("Civ_Total_Pop" = "...2", "Emp_Total" = "...3", "Percent_of_Pop" = "...4", "Civ_Emp_Total" = "...5", "Civ_Emp_Percent" = "...6", "Unemp_Total" = "...7", "Unemp_Percent" = "...8", "Not_in_Labor_Force" = "...9")
+
+head(df2021age_sex_race)
+
+df2021age_sex_race$Age <- as.factor(df2021age_sex_race$Age)
+df2021age_sex_race$Civ_Total_Pop <- as.numeric(df2021age_sex_race$Civ_Total_Pop)
+df2021age_sex_race$Emp_Total <- as.numeric(df2021age_sex_race$Emp_Total)
+df2021age_sex_race$Percent_of_Pop <- as.numeric(df2021age_sex_race$Percent_of_Pop)
+df2021age_sex_race$Civ_Emp_Total <- as.numeric(df2021age_sex_race$Civ_Emp_Total)
+df2021age_sex_race$Civ_Emp_Percent <- as.numeric(df2021age_sex_race$Civ_Emp_Percent)
+df2021age_sex_race$Unemp_Total <- as.numeric(df2021age_sex_race$Unemp_Total)
+df2021age_sex_race$Unemp_Percent <- as.numeric(df2021age_sex_race$Unemp_Percent)
+df2021age_sex_race$Not_in_Labor_Force <- as.numeric(df2021age_sex_race$Not_in_Labor_Force)
+
+
+
+
+WHMAgeColumn <- df2021age_sex_race[89:110, 1]
+WHMUnempTotalColumn <- df2021age_sex_race[89:110, 7]
+WHWUnempTotalColumn <- df2021age_sex_race[111:132, 7]
+BLMenUnempTotalColumn <- df2021age_sex_race[155:176, 7]
+BLWomUnempTotalColumn <- df2021age_sex_race[177:198, 7]
+AsiMenUnempTotalColumn <- df2021age_sex_race[221:242, 7]
+AsiWomUnempTotalColumn <- df2021age_sex_race[243:264, 7]
+UnempData <- data.frame(WHMAgeColumn, WHMUnempTotalColumn, WHWUnempTotalColumn, BLMenUnempTotalColumn, BLWomUnempTotalColumn, AsiMenUnempTotalColumn, AsiWomUnempTotalColumn)
+
+head(UnempData)
+str(UnempData)
+
+
+```
+
+### Questions for Future Steps
+
+* How can I make visually effective plots that help give insights about the data?
+* What specific data are needed to run an effective logistic regression?
+* How can I prepare data from three different years to show the change over time?
+
+## What Information is Not Self-Evident
+* It is not evident evident 
+
+## Different Ways to Look at this Data
+
+To throw back to my initial research questions, I am most interested in the level of unemployment based on demographics. I would like to attempt to predict which groups are most vulnerable to job loss in the time of a pandemic. If I have time, I would also like to observe what industries would be most impacted by a pandemic as well. I would love to compare the last few years (2019, 2020, 2021) but today I'm focusing on 2021 for this part of the project for the sake of time efficiency. I expect that most of the steps for cleaning the data from 2019 and 2020 will be similar to what I have done and will do today. 
+
+Below you will see that I have created 6 data frames based on the *df2021_by_age* data frame I created above. I have separated them out by race and sex, as well as age. This can tell us more specific information about unemployment in 2021, particularly which demographics had the highest level of unemployment. 
+
+### Slicing and Dicing
+
+```{r}
+df2021_age_white_men <- df2021age_sex_race[89:110,]
+
+df2021_age_white_women <- df2021age_sex_race[111:132,]
+
+df2021_age_black_men <- df2021age_sex_race[155:176,]
+
+df2021_age_black_women <- df2021age_sex_race[177:198,]
+
+df2021_age_asian_men <- df2021age_sex_race[221:242,]
+
+df2021_age_asian_women <- df2021age_sex_race[243:264,]
+
+
+# data frames with specific columns
+
+WMUnemp <- df2021age_sex_race[89:110, 1]
+```
+
+
+### Summarizing the Data for Key Questions
+
+```{r}
+summary(df2021_age_white_men)
+
+str(df2021_age_white_men)
+
+
+```
+
+
+### Plots and Tables
+
+```{r}
+Bar_Chart_Unemp <- ggplot(UnempData, aes(x = Age, y = Bl_Women_Unemp)) + geom_bar(stat = "identity") + ggtitle("Age to Unemployment in Black Women") + xlab("Age Range") + ylab("Number Unemployed")
+
+## Useful charts and plots will include bar charts and pie charts
+## I will also need to plot a logistic regression line once I get to that step
+
+```
+
+
+
+## Applying Machine Learning Techniques
+Logistic regression will be essential for this project, as ultimately what I am looking to predict is whether or not a given individual will be unemployed given a pandemic similar to Covid-19, or an increase in cases. A major assumption in logistic regression is that the result will be binary - in this case, whether the individual is employed or not. 
+
+## Questions for Future Steps
+* I may need to review the data I imported to see if I can organize it for more effective visualization
+* What kind of plots and charts can I make once I pull in the data from 2021 and 2020?
+
+
+
+
+
+
+
+
+
